@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Princisite</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#111;
+  color:white;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+header{
+  background:#222;
+  padding:20px;
+  text-align:center;
+  font-size:2em;
+}
+main{
+  flex:1;
+  display:flex;
+  gap:30px;
+  padding:20px;
+}
+section{
+  flex:1;
+  background:#222;
+  padding:20px;
+  border-radius:15px;
+  overflow:auto;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:15px;
+}
+th,td{
+  border:1px solid #555;
+  padding:8px;
+  text-align:center;
+}
+th{ background:#333; }
+button{
+  background:#e50914;
+  color:white;
+  border:none;
+  padding:10px 18px;
+  border-radius:20px;
+  cursor:pointer;
+  margin:5px 0;
+}
+input[type=text], textarea{
+  width:100%;
+  padding:8px;
+  margin-bottom:10px;
+  border-radius:10px;
+  border:none;
+}
+#adminControls, #adminTable { display:none; }
+</style>
+</head>
+
+<body>
+
+<header id="header">Bienvenue</header>
+
+<div id="login" style="max-width:300px;margin:40px auto;">
+  <form id="loginForm">
+    <input id="prenomInput" type="text" placeholder="Entrez votre prénom" required>
+    <button type="submit">Entrer</button>
+  </form>
+</div>
+
+<main id="main" style="display:none;">
+<section>
+  <h2>Planning</h2>
+
+  <button id="adminBtn" style="display:none;">Mode admin</button>
+
+  <div id="adminControls">
+    <button id="addDay">Ajouter un jour</button>
+    <button id="removeDay">Supprimer un jour</button>
+  </div>
+
+  <!-- TABLEAU UTILISATEUR -->
+  <table>
+    <thead>
+      <tr>
+        <th>Jour</th>
+        <th>Ma présence</th>
+      </tr>
+    </thead>
+    <tbody id="userTable"></tbody>
+  </table>
+
+  <!-- TABLEAU ADMIN -->
+  <table id="adminTable">
+    <thead>
+      <tr id="adminHeader"></tr>
+    </thead>
+    <tbody id="adminBody"></tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Messagerie</h2>
+  <form action="mailto:leandre.sly.05@gmail.com" method="post" enctype="text/plain">
+    <input type="text" name="prenom" placeholder="Votre prénom" required>
+    <textarea name="message" rows="5" placeholder="Votre message" required></textarea>
+    <button type="submit">Envoyer</button>
+  </form>
+</section>
+</main>
+
+<script>
+const comptes = ['celian','clement','ethan','guillaume','kien','martin','sacha','thibault','leandre'];
+let currentUser = null;
+let adminMode = false;
+
+function getPlanning(){
+  return JSON.parse(localStorage.getItem('planning')) || [
+    {jour:'Dimanche', presence:{}},
+    {jour:'Lundi', presence:{}},
+    {jour:'Mardi', presence:{}}
+  ];
+}
+function savePlanning(p){ localStorage.setItem('planning', JSON.stringify(p)); }
+
+function render(){
+  const planning = getPlanning();
+  const userBody = document.getElementById('userTable');
+  const adminHeader = document.getElementById('adminHeader');
+  const adminBody = document.getElementById('adminBody');
+
+  userBody.innerHTML='';
+  adminHeader.innerHTML='';
+  adminBody.innerHTML='';
+
+  // TABLEAU UTILISATEUR
+  planning.forEach((d,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${d.jour}</td>
+      <td><input type="checkbox" data-i="${i}" ${d.presence[currentUser]?'checked':''}></td>
+    `;
+    userBody.appendChild(tr);
+  });
+
+  // TABLEAU ADMIN (TOUS LES COMPTES, TOUJOURS)
+  if(adminMode){
+    adminHeader.innerHTML='<th>Jour</th>' + comptes.map(p=>`<th>${p}</th>`).join('');
+    planning.forEach(d=>{
+      let row=`<td>${d.jour}</td>`;
+      comptes.forEach(p=>{
+        row+=`<td><input type="checkbox" disabled ${d.presence[p]?'checked':''}></td>`;
+      });
+      const tr=document.createElement('tr');
+      tr.innerHTML=row;
+      adminBody.appendChild(tr);
+    });
+  }
+}
+
+// COCHE UTILISATEUR
+document.addEventListener('change',e=>{
+  if(e.target.dataset.i!==undefined){
+    const p=getPlanning();
+    p[e.target.dataset.i].presence[currentUser]=e.target.checked;
+    savePlanning(p);
+  }
+});
+
+// LOGIN
+loginForm.onsubmit=e=>{
+  e.preventDefault();
+  const p=prenomInput.value.toLowerCase();
+  if(!comptes.includes(p)) return alert('Compte inconnu');
+  currentUser=p;
+  header.textContent='Bienvenue '+p;
+  login.style.display='none';
+  main.style.display='flex';
+  if(p==='leandre') adminBtn.style.display='inline-block';
+  render();
+};
+
+// ADMIN
+adminBtn.onclick=()=>{
+  if(prompt('Code admin')==='admin123'){
+    adminMode=true;
+    adminControls.style.display='block';
+    adminTable.style.display='table';
+    render();
+  } else alert('Code incorrect');
+};
+
+addDay.onclick=()=>{
+  const j=prompt('Nom du jour');
+  if(!j) return;
+  const p=getPlanning();
+  p.push({jour:j,presence:{}});
+  savePlanning(p);
+  render();
+};
+
+removeDay.onclick=()=>{
+  const j=prompt('Jour à supprimer');
+  let p=getPlanning();
+  p=p.filter(d=>d.jour.toLowerCase()!==j.toLowerCase());
+  savePlanning(p);
+  render();
+};
+</script>
+
+</body>
+</html>
+
